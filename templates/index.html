@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css"
+        integrity="sha384-zCbKRCUGaJDkqS1kPbPd7TveP5iyJE0EjAuZQTgFLD2ylzuqKfdKlfG/eSrtxUkn" crossorigin="anonymous">
+    <!-- Font Awesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <title>TODO List</title>
+</head>
+
+<body>
+    <div class="container-fluid">
+        <h1>{{ .title }}</h1>
+        <br>
+
+        <p><a class="btn btn-primary" aria-hidden="true" href="/new">Create</a></p>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th scope="col"></th>
+                    <th scope="col">#</th>
+                    <th scope="col">Title</th>
+                    <th scope="col">Description</th>
+                    <th scope="col">Create Date</th>
+                    <th scope="col">Update Date</th>
+                    <th scope="col"></th>
+                    <th scope="col"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {{ range .todoList}}
+                <tr>
+                    <th scope="row">
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input" name="delCheckBoxes" id={{
+                                printf "delCheck%d" .ID }} value={{ .ID }}>
+                            <label class="custom-control-label" for={{ printf "delCheck%d" .ID }}></label>
+                        </div>
+                    </th>
+                    <th scope="row"><a href={{ printf "/show?id=%d" .ID }}>{{ .ID }}</a></th>
+                    <td>{{ .Title.String }}</td>
+                    <td>{{ .Description.String }}</td>
+                    <td>{{ .CreateDate.Time.Format "2006-01-02 15:04:05" }}</td>
+                    {{ if .UpdateDate.Valid }}
+                    <td>{{ .UpdateDate.Time.Format "2006-01-02 15:04:05" }}</td>
+                    {{ else }}
+                    <td></td>
+                    {{ end }}
+                    <th scope="row"><a class="btn btn-link fa fa-pencil-square-o" aria-hidden="true" href={{
+                            printf "/edit?id=%d" .ID }}></a></th>
+                    <!-- <th scope="row"><a class="fa fa-trash-o" aria-hidden="true" href=""></a></th> -->
+                    <th scope="row"><button type="button" class="btn btn-link fa fa-trash-o" data-toggle="modal"
+                            data-target="#exampleModal" data-action={{ .ID }}></button></th>
+                </tr>
+                {{ end }}
+            </tbody>
+        </table>
+        <p><button type="button" class="btn btn-danger" data-toggle="modal" data-target="#exampleModal"
+                data-deltype="bulk">Delete checked Items</button></p>
+
+        <nav aria-label="...">
+            <ul class="pagination justify-content-center">
+                {{ if gt .firstPage 5 }}
+                <li class="page-item">
+                    <a class="page-link" href={{ printf "/index?page=%d" .previous }}>Previous</a>
+                </li>
+                {{ else }}
+                <li class="page-item disabled">
+                    <a class="page-link">Previous</a>
+                </li>
+                {{ end }}
+
+                {{ range $idx, $v := .pageSlice }}
+                <li class={{ if $v.IsSelected }}"page-item active"{{ else }}"page-item"{{ end }}><a class="page-link"
+                        href={{ printf "/index?page=%d" $v.PageNum }}>{{ $v.PageNum }}</a></li>
+                {{ end }}
+
+                {{ if lt .lastPage .totalPage }}
+                <li class="page-item">
+                    <a class="page-link" href={{ printf "/index?page=%d" .next }}>Next</a>
+                </li>
+                {{ else }}
+                <li class="page-item disabled"></a>
+                    <a class="page-link">Next</a>
+                </li>
+                {{ end }}
+            </ul>
+        </nav>
+    </div>
+
+    <!-- Modal -->
+    {{ template "_modal" . }}
+
+    <!-- Option 1: jQuery and Bootstrap Bundle (includes Popper) -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"
+        integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-fQybjgWLrvvRgtW6bFlB7jaZrFsaBXjsOMm/tB9LTS58ONXgqbR9W8oWht/amnpF"
+        crossorigin="anonymous"></script>
+    <script>
+        $('#exampleModal').on('show.bs.modal', function (event) {
+            var button = $(event.relatedTarget)
+            var deleteType = button.data('deltype')
+
+            if (deleteType === 'bulk') {
+                var idList = $('input[type=checkbox]:checked').map(function (_, el) {
+                    return $(el).val();
+                }).get();
+                $('#ids').val(idList.join())
+            } else {
+                var deleteId = button.data('action')
+                $('#id').val(deleteId)
+            }
+        })
+    </script>
+</body>
+
+</html>
