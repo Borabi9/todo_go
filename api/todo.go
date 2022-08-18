@@ -17,9 +17,9 @@ func (server *Server) ListUpTodo(ctx *gin.Context) {
 	limit := 5
 	navLen := 5
 
-	total, err := server.repo.CountTodo(ctx)
-	if err != nil {
-		fmt.Println(err)
+	total, dbErr := server.repo.CountTodo(ctx)
+	if dbErr != nil {
+		ctx.HTML(http.StatusInternalServerError, "error.html", gin.H{})
 		return
 	}
 
@@ -53,9 +53,9 @@ func (server *Server) ListUpTodo(ctx *gin.Context) {
 		Limit:  int32(limit),
 	}
 
-	todoList, err := server.repo.ListTodo(ctx, arg)
-	if err != nil {
-		fmt.Println(err)
+	todoList, dbErr := server.repo.ListTodo(ctx, arg)
+	if dbErr != nil {
+		ctx.HTML(http.StatusInternalServerError, "error.html", gin.H{})
 		return
 	}
 
@@ -80,6 +80,11 @@ func (server *Server) NewTodo(ctx *gin.Context) {
 	})
 }
 
+type createTodoRequest struct {
+	Title       string `form:"titleInput" binding:"required"`
+	Description string `form:"descriptionInput" binding:"required"`
+}
+
 func (server *Server) CreateTodo(ctx *gin.Context) {
 	var req createTodoRequest
 	if err := ctx.ShouldBind(&req); err != nil {
@@ -93,11 +98,16 @@ func (server *Server) CreateTodo(ctx *gin.Context) {
 	}
 	result, dbErr := server.repo.CreateTodo(ctx, arg)
 	if dbErr != nil {
-		fmt.Println(dbErr)
+		ctx.HTML(http.StatusInternalServerError, "error.html", gin.H{})
+		return
 	}
 	createdId, _ := result.LastInsertId()
 
 	ctx.Redirect(http.StatusFound, fmt.Sprintf("/show?id=%d", createdId))
+}
+
+type getTodoRequest struct {
+	ID int64 `form:"id" binding:"min=1"`
 }
 
 func (server *Server) ShowTodo(ctx *gin.Context) {
@@ -138,7 +148,8 @@ func (server *Server) EditTodo(ctx *gin.Context) {
 
 	todo, dbErr := server.repo.GetTodo(ctx, req.ID)
 	if dbErr != nil {
-		fmt.Println(dbErr)
+		ctx.HTML(http.StatusInternalServerError, "error.html", gin.H{})
+		return
 	}
 
 	ctx.HTML(http.StatusOK, "edit.html", gin.H{
@@ -147,10 +158,16 @@ func (server *Server) EditTodo(ctx *gin.Context) {
 	})
 }
 
+type updateTodoRequest struct {
+	ID          int64  `form:"id" binding:"required,numeric"`
+	Description string `form:"descriptionInput" binding:"required"`
+}
+
 func (server *Server) UpdateTodo(ctx *gin.Context) {
 	var req updateTodoRequest
 	if err := ctx.ShouldBind(&req); err != nil {
-		fmt.Println(err)
+		ctx.HTML(http.StatusBadRequest, "error.html", gin.H{})
+		return
 	}
 
 	arg := db.UpdateTodoParams{
@@ -158,16 +175,23 @@ func (server *Server) UpdateTodo(ctx *gin.Context) {
 		ID:          req.ID,
 	}
 	if dbErr := server.repo.UpdateTodo(ctx, arg); dbErr != nil {
-		fmt.Println(dbErr)
+		ctx.HTML(http.StatusInternalServerError, "error.html", gin.H{})
+		return
 	}
 
 	ctx.Redirect(http.StatusFound, fmt.Sprintf("/show?id=%d", req.ID))
 }
 
+type deleteTodoRequest struct {
+	ID     int64  `form:"id" binding:"numeric"`
+	IDList string `form:"ids"`
+}
+
 func (server *Server) deleteTodo(ctx *gin.Context) {
 	var req deleteTodoRequest
 	if err := ctx.ShouldBind(&req); err != nil {
-		fmt.Println(err)
+		ctx.HTML(http.StatusBadRequest, "error.html", gin.H{})
+		return
 	}
 
 	if len(req.IDList) == 0 {
@@ -183,25 +207,6 @@ func (server *Server) deleteTodo(ctx *gin.Context) {
 	}
 
 	ctx.Redirect(http.StatusFound, "/index")
-}
-
-type getTodoRequest struct {
-	ID int64 `form:"id" binding:"min=1"`
-}
-
-type createTodoRequest struct {
-	Title       string `form:"titleInput" binding:"required"`
-	Description string `form:"descriptionInput" binding:"required"`
-}
-
-type updateTodoRequest struct {
-	ID          int64  `form:"id" binding:"required,numeric"`
-	Description string `form:"descriptionInput" binding:"required"`
-}
-
-type deleteTodoRequest struct {
-	ID     int64  `form:"id" binding:"numeric"`
-	IDList string `form:"ids"`
 }
 
 type Page struct {
