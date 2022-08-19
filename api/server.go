@@ -14,18 +14,27 @@ type Server struct {
 	router *gin.Engine
 }
 
-func NewServer(repo db.Repo) *Server {
+func NewServer(repo db.Repo, isTest bool) *Server {
 	server := &Server{repo: repo}
+
+	server.setupRouter(isTest)
+	return server
+}
+
+func (server *Server) setupRouter(isTest bool) {
 	router := gin.Default()
-	store := cookie.NewStore([]byte("secret"))
-	router.Use(sessions.Sessions("mysession", store))
-	router.Use(csrf.Middleware(csrf.Options{
-		Secret: "secret123",
-		ErrorFunc: func(c *gin.Context) {
-			c.String(400, "CSRF token mismatch")
-			c.Abort()
-		},
-	}))
+
+	if !isTest {
+		store := cookie.NewStore([]byte("secret"))
+		router.Use(sessions.Sessions("mysession", store))
+		router.Use(csrf.Middleware(csrf.Options{
+			Secret: "secret123",
+			ErrorFunc: func(c *gin.Context) {
+				c.String(400, "CSRF token mismatch")
+				c.Abort()
+			},
+		}))
+	}
 	router.LoadHTMLGlob("../templates/*")
 	// router.LoadHTMLFiles("../templates/edit.html", "../templates/index.html", "../templates/new.html", "../templates/show.html")
 
@@ -38,7 +47,6 @@ func NewServer(repo db.Repo) *Server {
 	router.POST("/delete", server.deleteTodo)
 
 	server.router = router
-	return server
 }
 
 func (server *Server) Start(address string) error {

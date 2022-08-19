@@ -22,7 +22,7 @@ func main() {
 	}
 
 	repo := db.NewRepo(conn)
-	server := api.NewServer(repo)
+	server := api.NewServer(repo, false)
 
 	err = server.Start(config.ServerAddress)
 	if err != nil {
