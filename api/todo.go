@@ -33,18 +33,12 @@ func (server *Server) ListUpTodo(ctx *gin.Context) {
 	if firstPage+navLen < int(totalPage) {
 		lastPage += navLen
 	} else {
-		lastPage += page % navLen
+		lastPage += int(totalPage) % navLen
 	}
 
 	pageSlice := []Page{}
-	if firstPage != lastPage {
-		for i := firstPage; i < lastPage; i++ {
-			pageSlice = append(pageSlice, Page{i + 1, (i + 1) == page})
-		}
-	} else {
-		for i := lastPage - firstPage; i < lastPage; i++ {
-			pageSlice = append(pageSlice, Page{i + 1, (i + 1) == page})
-		}
+	for i := firstPage; i < lastPage; i++ {
+		pageSlice = append(pageSlice, Page{i + 1, (i + 1) == page})
 	}
 	// pagination related code end
 

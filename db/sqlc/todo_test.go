@@ -76,7 +76,8 @@ func TestDeleteTodoList(t *testing.T) {
 	}
 
 	ids := strings.Join(idSlice, ",")
-	testQueries.DeleteTodoList(context.Background(), ids)
+	err := testQueries.DeleteTodoList(context.Background(), ids)
+	require.NoError(t, err)
 
 	total, _ := testQueries.CountTodo(context.Background())
 	require.Equal(t, int64(0), total)
