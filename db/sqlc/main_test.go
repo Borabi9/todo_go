@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"first-app/todo_go/util"
+	"fmt"
 	"log"
 	"os"
 	"testing"
@@ -18,7 +19,14 @@ func TestMain(m *testing.M) {
 		log.Fatal("cannot load config:", err)
 	}
 
-	testDB, err := sql.Open(config.DBDriver, config.DBSource)
+	dbSource := fmt.Sprintf(
+		"%s:%s@tcp(%s:%s)/todo?parseTime=true&loc=Asia%%2FTokyo",
+		config.DBUser,
+		config.DBPassword,
+		config.DBHost,
+		config.DBPort,
+	)
+	testDB, err := sql.Open(config.DBDriver, dbSource)
 	if err != nil {
 		log.Fatal("Cannot connect to db: ", err)
 	}

@@ -24,26 +24,38 @@ func NewServer(repo db.Repo, isTest bool) *Server {
 func (server *Server) setupRouter(isTest bool) {
 	router := gin.Default()
 
-	if !isTest {
-		store := cookie.NewStore([]byte("secret"))
-		router.Use(sessions.Sessions("mysession", store))
-		router.Use(csrf.Middleware(csrf.Options{
+	store := cookie.NewStore([]byte("secret"))
+	router.Use(sessions.Sessions("mysession", store))
+	var options csrf.Options
+	if isTest {
+		options = csrf.Options{
+			Secret:        "secret123",
+			IgnoreMethods: []string{"GET", "POST"},
+			ErrorFunc: func(c *gin.Context) {
+				c.String(400, "CSRF token mismatch")
+				c.Abort()
+			},
+		}
+	} else {
+		options = csrf.Options{
 			Secret: "secret123",
 			ErrorFunc: func(c *gin.Context) {
 				c.String(400, "CSRF token mismatch")
 				c.Abort()
 			},
-		}))
+		}
 	}
+	router.Use(csrf.Middleware(options))
 	router.LoadHTMLGlob("../templates/*")
 	// router.LoadHTMLFiles("../templates/edit.html", "../templates/index.html", "../templates/new.html", "../templates/show.html")
 
-	router.GET("/index", server.ListUpTodo)
-	router.GET("/new", server.NewTodo)
-	router.POST("/new", server.CreateTodo)
-	router.GET("/show", server.ShowTodo)
-	router.GET("/edit", server.EditTodo)
-	router.POST("/edit", server.UpdateTodo)
+	router.GET("/health", server.healthGet)
+	router.GET("/index", server.listUpTodo)
+	router.GET("/new", server.newTodo)
+	router.POST("/new", server.createTodo)
+	router.GET("/show", server.showTodo)
+	router.GET("/edit", server.editTodo)
+	router.POST("/edit", server.updateTodo)
 	router.POST("/delete", server.deleteTodo)
 
 	server.router = router

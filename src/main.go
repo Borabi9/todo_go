@@ -5,6 +5,7 @@ import (
 	"first-app/todo_go/api"
 	db "first-app/todo_go/db/sqlc"
 	"first-app/todo_go/util"
+	"fmt"
 	"log"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -16,7 +17,14 @@ func main() {
 		log.Fatal("cannot load config:", err)
 	}
 
-	conn, err := sql.Open(config.DBDriver, config.DBSource)
+	dbSource := fmt.Sprintf(
+		"%s:%s@tcp(%s:%s)/todo?parseTime=true&loc=Asia%%2FTokyo",
+		config.DBUser,
+		config.DBPassword,
+		config.DBHost,
+		config.DBPort,
+	)
+	conn, err := sql.Open(config.DBDriver, dbSource)
 	if err != nil {
 		log.Fatal("Cannot connect to db: ", err)
 	}

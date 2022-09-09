@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	db "first-app/todo_go/db/sqlc"
+	"first-app/todo_go/util"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -11,7 +12,11 @@ import (
 	csrf "github.com/utrack/gin-csrf"
 )
 
-func (server *Server) ListUpTodo(ctx *gin.Context) {
+func (server *Server) healthGet(ctx *gin.Context) {
+	ctx.JSON(http.StatusOK, gin.H{"status": "Up"})
+}
+
+func (server *Server) listUpTodo(ctx *gin.Context) {
 	parsedPage := ctx.DefaultQuery("page", "1")
 	page, _ := strconv.Atoi(parsedPage)
 	limit := 5
@@ -23,30 +28,12 @@ func (server *Server) ListUpTodo(ctx *gin.Context) {
 		return
 	}
 
-	// pagination related code start
-	totalPage := total / int64(limit)
-	if total%int64(limit) != 0 {
-		totalPage += 1
-	}
-	firstPage := ((page / navLen) * navLen)
-	lastPage := firstPage
-	if firstPage+navLen < int(totalPage) {
-		lastPage += navLen
-	} else {
-		lastPage += int(totalPage) % navLen
-	}
-
-	pageSlice := []Page{}
-	for i := firstPage; i < lastPage; i++ {
-		pageSlice = append(pageSlice, Page{i + 1, (i + 1) == page})
-	}
-	// pagination related code end
+	pageInfo := util.GetPageInfo(page, navLen, total, int64(limit))
 
 	arg := db.ListTodoParams{
 		Offset: int32((page - 1) * limit),
 		Limit:  int32(limit),
 	}
-
 	todoList, dbErr := server.repo.ListTodo(ctx, arg)
 	if dbErr != nil {
 		ctx.HTML(http.StatusInternalServerError, "error.html", gin.H{})
@@ -57,18 +44,11 @@ func (server *Server) ListUpTodo(ctx *gin.Context) {
 		"title":    "Hello World!",
 		"todoList": todoList,
 		"token":    csrf.GetToken(ctx),
-		// pagination related data start
-		"pageSlice": pageSlice,
-		"totalPage": totalPage,
-		"firstPage": pageSlice[0].PageNum,
-		"lastPage":  pageSlice[len(pageSlice)-1].PageNum,
-		"previous":  pageSlice[0].PageNum - navLen,
-		"next":      pageSlice[len(pageSlice)-1].PageNum + 1,
-		// pagination related data end
+		"pageInfo": pageInfo,
 	})
 }
 
-func (server *Server) NewTodo(ctx *gin.Context) {
+func (server *Server) newTodo(ctx *gin.Context) {
 	ctx.HTML(http.StatusOK, "new.html", gin.H{
 		"token": csrf.GetToken(ctx),
 	})
@@ -79,7 +59,7 @@ type createTodoRequest struct {
 	Description string `form:"descriptionInput" binding:"required"`
 }
 
-func (server *Server) CreateTodo(ctx *gin.Context) {
+func (server *Server) createTodo(ctx *gin.Context) {
 	var req createTodoRequest
 	if err := ctx.ShouldBind(&req); err != nil {
 		ctx.Redirect(http.StatusFound, "/index")
@@ -104,7 +84,7 @@ type getTodoRequest struct {
 	ID int64 `form:"id" binding:"min=1"`
 }
 
-func (server *Server) ShowTodo(ctx *gin.Context) {
+func (server *Server) showTodo(ctx *gin.Context) {
 	var req getTodoRequest
 	if err := ctx.ShouldBind(&req); err != nil {
 		ctx.HTML(http.StatusBadRequest, "error.html", gin.H{})
@@ -133,7 +113,7 @@ func (server *Server) ShowTodo(ctx *gin.Context) {
 	})
 }
 
-func (server *Server) EditTodo(ctx *gin.Context) {
+func (server *Server) editTodo(ctx *gin.Context) {
 	var req getTodoRequest
 	if err := ctx.ShouldBind(&req); err != nil {
 		ctx.HTML(http.StatusBadRequest, "error.html", gin.H{})
@@ -157,7 +137,7 @@ type updateTodoRequest struct {
 	Description string `form:"descriptionInput" binding:"required"`
 }
 
-func (server *Server) UpdateTodo(ctx *gin.Context) {
+func (server *Server) updateTodo(ctx *gin.Context) {
 	var req updateTodoRequest
 	if err := ctx.ShouldBind(&req); err != nil {
 		ctx.HTML(http.StatusBadRequest, "error.html", gin.H{})
@@ -201,9 +181,4 @@ func (server *Server) deleteTodo(ctx *gin.Context) {
 	}
 
 	ctx.Redirect(http.StatusFound, "/index")
-}
-
-type Page struct {
-	PageNum    int
-	IsSelected bool
 }
