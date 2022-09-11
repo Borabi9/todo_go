@@ -18,13 +18,17 @@ func (server *Server) healthGet(ctx *gin.Context) {
 
 func (server *Server) listUpTodo(ctx *gin.Context) {
 	parsedPage := ctx.DefaultQuery("page", "1")
-	page, _ := strconv.Atoi(parsedPage)
+	page, err := strconv.Atoi(parsedPage)
+	if err != nil {
+		ctx.HTML(http.StatusBadRequest, "400.html", gin.H{})
+		return
+	}
 	limit := 5
 	navLen := 5
 
 	total, dbErr := server.repo.CountTodo(ctx)
 	if dbErr != nil {
-		ctx.HTML(http.StatusInternalServerError, "error.html", gin.H{})
+		ctx.HTML(http.StatusInternalServerError, "500.html", gin.H{})
 		return
 	}
 
@@ -36,7 +40,7 @@ func (server *Server) listUpTodo(ctx *gin.Context) {
 	}
 	todoList, dbErr := server.repo.ListTodo(ctx, arg)
 	if dbErr != nil {
-		ctx.HTML(http.StatusInternalServerError, "error.html", gin.H{})
+		ctx.HTML(http.StatusInternalServerError, "500.html", gin.H{})
 		return
 	}
 
@@ -62,7 +66,7 @@ type createTodoRequest struct {
 func (server *Server) createTodo(ctx *gin.Context) {
 	var req createTodoRequest
 	if err := ctx.ShouldBind(&req); err != nil {
-		ctx.Redirect(http.StatusFound, "/index")
+		ctx.HTML(http.StatusBadRequest, "400.html", gin.H{})
 		return
 	}
 
@@ -72,7 +76,7 @@ func (server *Server) createTodo(ctx *gin.Context) {
 	}
 	result, dbErr := server.repo.CreateTodo(ctx, arg)
 	if dbErr != nil {
-		ctx.HTML(http.StatusInternalServerError, "error.html", gin.H{})
+		ctx.HTML(http.StatusInternalServerError, "500.html", gin.H{})
 		return
 	}
 	createdId, _ := result.LastInsertId()
@@ -87,24 +91,18 @@ type getTodoRequest struct {
 func (server *Server) showTodo(ctx *gin.Context) {
 	var req getTodoRequest
 	if err := ctx.ShouldBind(&req); err != nil {
-		ctx.HTML(http.StatusBadRequest, "error.html", gin.H{})
+		ctx.HTML(http.StatusBadRequest, "400.html", gin.H{})
 		return
 	}
-	// id := ctx.Query("id")
-	// parsedId, err := strconv.Atoi(id)
-	// if err != nil {
-	// 	ctx.HTML(http.StatusBadRequest, "error.html", gin.H{})
-	// 	return
-	// }
 
 	todo, dbErr := server.repo.GetTodo(ctx, req.ID)
 	if dbErr != nil {
 		if dbErr == sql.ErrNoRows {
-			ctx.HTML(http.StatusNotFound, "error.html", gin.H{})
+			ctx.HTML(http.StatusNotFound, "500.html", gin.H{})
 			return
 		}
 
-		ctx.HTML(http.StatusInternalServerError, "error.html", gin.H{})
+		ctx.HTML(http.StatusInternalServerError, "500.html", gin.H{})
 		return
 	}
 
@@ -116,13 +114,13 @@ func (server *Server) showTodo(ctx *gin.Context) {
 func (server *Server) editTodo(ctx *gin.Context) {
 	var req getTodoRequest
 	if err := ctx.ShouldBind(&req); err != nil {
-		ctx.HTML(http.StatusBadRequest, "error.html", gin.H{})
+		ctx.HTML(http.StatusBadRequest, "400.html", gin.H{})
 		return
 	}
 
 	todo, dbErr := server.repo.GetTodo(ctx, req.ID)
 	if dbErr != nil {
-		ctx.HTML(http.StatusInternalServerError, "error.html", gin.H{})
+		ctx.HTML(http.StatusInternalServerError, "500.html", gin.H{})
 		return
 	}
 
@@ -140,7 +138,7 @@ type updateTodoRequest struct {
 func (server *Server) updateTodo(ctx *gin.Context) {
 	var req updateTodoRequest
 	if err := ctx.ShouldBind(&req); err != nil {
-		ctx.HTML(http.StatusBadRequest, "error.html", gin.H{})
+		ctx.HTML(http.StatusBadRequest, "500.html", gin.H{})
 		return
 	}
 
@@ -149,7 +147,7 @@ func (server *Server) updateTodo(ctx *gin.Context) {
 		ID:          req.ID,
 	}
 	if dbErr := server.repo.UpdateTodo(ctx, arg); dbErr != nil {
-		ctx.HTML(http.StatusInternalServerError, "error.html", gin.H{})
+		ctx.HTML(http.StatusInternalServerError, "500.html", gin.H{})
 		return
 	}
 
@@ -164,7 +162,7 @@ type deleteTodoRequest struct {
 func (server *Server) deleteTodo(ctx *gin.Context) {
 	var req deleteTodoRequest
 	if err := ctx.ShouldBind(&req); err != nil {
-		ctx.HTML(http.StatusBadRequest, "error.html", gin.H{})
+		ctx.HTML(http.StatusBadRequest, "500.html", gin.H{})
 		return
 	}
 
