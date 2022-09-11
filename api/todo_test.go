@@ -111,8 +111,8 @@ func TestListUpTodoAPI(t *testing.T) {
 			server := newTestServer(repo)
 			recorder := httptest.NewRecorder()
 
-			url := fmt.Sprintf("/index?page=%s", tc.page)
-			request, err := http.NewRequest(http.MethodGet, url, nil)
+			targetUrl := fmt.Sprintf("/index?page=%s", tc.page)
+			request, err := http.NewRequest(http.MethodGet, targetUrl, nil)
 			require.NoError(t, err)
 
 			server.router.ServeHTTP(recorder, request)
@@ -233,8 +233,8 @@ func TestNewTodoAPI(t *testing.T) {
 			server := newTestServer(repo)
 			recorder := httptest.NewRecorder()
 
-			url := "/new"
-			request, err := http.NewRequest(http.MethodGet, url, nil)
+			targetUrl := "/new"
+			request, err := http.NewRequest(http.MethodGet, targetUrl, nil)
 			require.NoError(t, err)
 
 			server.router.ServeHTTP(recorder, request)
@@ -342,7 +342,7 @@ func TestEditTodoAPI(t *testing.T) {
 				require.Equal(t, http.StatusOK, recorder.Code)
 			},
 		},
-		// TODO: add case for bad request
+		// TODO: add case for not found
 		{
 			name:   "Internal Error",
 			todoID: todo.ID,
@@ -356,7 +356,18 @@ func TestEditTodoAPI(t *testing.T) {
 				require.Equal(t, http.StatusInternalServerError, recorder.Code)
 			},
 		},
-		// TODO: add case for invalid ID
+		{
+			name:   "Bad Request",
+			todoID: 0,
+			buildStubs: func(repo *mockdb.MockRepo) {
+				repo.EXPECT().
+					GetTodo(gomock.Any(), gomock.Eq(todo.ID)).
+					Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
 	}
 
 	for i := range testCases {
@@ -372,8 +383,227 @@ func TestEditTodoAPI(t *testing.T) {
 			server := newTestServer(repo)
 			recorder := httptest.NewRecorder()
 
-			url := fmt.Sprintf("/edit?id=%d", tc.todoID)
-			request, err := http.NewRequest(http.MethodGet, url, nil)
+			targetUrl := fmt.Sprintf("/edit?id=%d", tc.todoID)
+			request, err := http.NewRequest(http.MethodGet, targetUrl, nil)
+			require.NoError(t, err)
+
+			server.router.ServeHTTP(recorder, request)
+			tc.checkResponse(t, recorder)
+		})
+	}
+}
+
+func TestUpdateTodoAPI(t *testing.T) {
+	todo := randomTodo()
+
+	testCases := []struct {
+		name          string
+		body          updateTodoRequest
+		buildStubs    func(repo *mockdb.MockRepo)
+		checkResponse func(t *testing.T, recorder *httptest.ResponseRecorder)
+	}{
+		{
+			name: "OK",
+			body: updateTodoRequest{
+				Description: todo.Description.String,
+				ID:          todo.ID,
+			},
+			buildStubs: func(repo *mockdb.MockRepo) {
+				arg := db.UpdateTodoParams{
+					Description: todo.Description,
+					ID:          todo.ID,
+				}
+
+				repo.EXPECT().
+					UpdateTodo(gomock.Any(), gomock.Eq(arg)).
+					Times(1).
+					Return(nil)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusFound, recorder.Code)
+			},
+		},
+		{
+			name: "Bad Request",
+			body: updateTodoRequest{
+				ID: todo.ID,
+			},
+			buildStubs: func(repo *mockdb.MockRepo) {
+				arg := db.UpdateTodoParams{
+					Description: todo.Description,
+					ID:          todo.ID,
+				}
+
+				repo.EXPECT().
+					UpdateTodo(gomock.Any(), gomock.Eq(arg)).
+					Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+		{
+			name: "Internal Error",
+			body: updateTodoRequest{
+				Description: todo.Description.String,
+				ID:          todo.ID,
+			},
+			buildStubs: func(repo *mockdb.MockRepo) {
+				arg := db.UpdateTodoParams{
+					Description: todo.Description,
+					ID:          todo.ID,
+				}
+
+				repo.EXPECT().
+					UpdateTodo(gomock.Any(), gomock.Eq(arg)).
+					Times(1).
+					Return(sql.ErrConnDone)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			repo := mockdb.NewMockRepo(ctrl)
+			tc.buildStubs(repo)
+
+			server := newTestServer(repo)
+			recorder := httptest.NewRecorder()
+
+			data := url.Values{}
+			data.Set("descriptionInput", tc.body.Description)
+			data.Set("id", fmt.Sprintf("%d", tc.body.ID))
+
+			targetUrl := "/edit"
+			request, err := http.NewRequest(http.MethodPost, targetUrl, strings.NewReader(data.Encode()))
+			request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+			require.NoError(t, err)
+
+			server.router.ServeHTTP(recorder, request)
+			tc.checkResponse(t, recorder)
+		})
+	}
+}
+
+func TestDeleteTodoAPI(t *testing.T) {
+	dummyDeleteReq := deleteTodoRequest{
+		ID:     1,
+		IDList: "1,2,3",
+	}
+
+	testCases := []struct {
+		name          string
+		body          deleteTodoRequest
+		buildStubs    func(repo *mockdb.MockRepo)
+		checkResponse func(t *testing.T, recorder *httptest.ResponseRecorder)
+	}{
+		{
+			name: "OK",
+			body: deleteTodoRequest{
+				ID: dummyDeleteReq.ID,
+			},
+			buildStubs: func(repo *mockdb.MockRepo) {
+				repo.EXPECT().
+					DeleteTodo(gomock.Any(), gomock.Eq(dummyDeleteReq.ID)).
+					Times(1).
+					Return(nil)
+
+				repo.EXPECT().
+					DeleteTodoList(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusFound, recorder.Code)
+			},
+		},
+		{
+			name: "OK with List",
+			body: deleteTodoRequest{
+				IDList: dummyDeleteReq.IDList,
+			},
+			buildStubs: func(repo *mockdb.MockRepo) {
+				repo.EXPECT().
+					DeleteTodo(gomock.Any(), gomock.Any()).
+					Times(0)
+
+				repo.EXPECT().
+					DeleteTodoList(gomock.Any(), gomock.Eq(dummyDeleteReq.IDList)).
+					Times(1).
+					Return(nil)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusFound, recorder.Code)
+			},
+		},
+		// TODO: Add Bad Request Case
+		{
+			name: "Internal Error 1",
+			body: deleteTodoRequest{
+				ID: dummyDeleteReq.ID,
+			},
+			buildStubs: func(repo *mockdb.MockRepo) {
+				repo.EXPECT().
+					DeleteTodo(gomock.Any(), gomock.Eq(dummyDeleteReq.ID)).
+					Times(1).
+					Return(sql.ErrConnDone)
+
+				repo.EXPECT().
+					DeleteTodoList(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+		{
+			name: "Internal Error 2",
+			body: deleteTodoRequest{
+				IDList: dummyDeleteReq.IDList,
+			},
+			buildStubs: func(repo *mockdb.MockRepo) {
+				repo.EXPECT().
+					DeleteTodo(gomock.Any(), gomock.Any()).
+					Times(0)
+
+				repo.EXPECT().
+					DeleteTodoList(gomock.Any(), gomock.Eq(dummyDeleteReq.IDList)).
+					Times(1).
+					Return(sql.ErrConnDone)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			repo := mockdb.NewMockRepo(ctrl)
+			tc.buildStubs(repo)
+
+			server := newTestServer(repo)
+			recorder := httptest.NewRecorder()
+
+			data := url.Values{}
+			data.Set("id", fmt.Sprintf("%d", tc.body.ID))
+			data.Set("ids", tc.body.IDList)
+
+			targetUrl := "/delete"
+			request, err := http.NewRequest(http.MethodPost, targetUrl, strings.NewReader(data.Encode()))
+			request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 			require.NoError(t, err)
 
 			server.router.ServeHTTP(recorder, request)

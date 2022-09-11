@@ -138,7 +138,7 @@ type updateTodoRequest struct {
 func (server *Server) updateTodo(ctx *gin.Context) {
 	var req updateTodoRequest
 	if err := ctx.ShouldBind(&req); err != nil {
-		ctx.HTML(http.StatusBadRequest, "500.html", gin.H{})
+		ctx.HTML(http.StatusBadRequest, "400.html", gin.H{})
 		return
 	}
 
@@ -162,19 +162,21 @@ type deleteTodoRequest struct {
 func (server *Server) deleteTodo(ctx *gin.Context) {
 	var req deleteTodoRequest
 	if err := ctx.ShouldBind(&req); err != nil {
-		ctx.HTML(http.StatusBadRequest, "500.html", gin.H{})
+		ctx.HTML(http.StatusBadRequest, "400.html", gin.H{})
 		return
 	}
 
 	if len(req.IDList) == 0 {
 		deleteId := req.ID
 		if dbErr := server.repo.DeleteTodo(ctx, deleteId); dbErr != nil {
-			fmt.Println(dbErr)
+			ctx.HTML(http.StatusInternalServerError, "500.html", gin.H{})
+			return
 		}
 	} else {
 		deleteIds := req.IDList
 		if dbErr := server.repo.DeleteTodoList(ctx, deleteIds); dbErr != nil {
-			fmt.Println(dbErr)
+			ctx.HTML(http.StatusInternalServerError, "500.html", gin.H{})
+			return
 		}
 	}
 
