@@ -5,6 +5,7 @@ import (
 	db "first-app/todo_go/db/sqlc"
 	"first-app/todo_go/util"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -20,6 +21,13 @@ func (server *Server) listUpTodo(ctx *gin.Context) {
 	parsedPage := ctx.DefaultQuery("page", "1")
 	page, err := strconv.Atoi(parsedPage)
 	if err != nil {
+		errDetails := util.SetErrorDetails(
+			"User manipulated invalid page param",
+			"User can see 400 Bad Request page",
+			"Request param tempered by client, no need to special issue handling",
+			"todo.go file, listupTodo method",
+		)
+		log.Println(errDetails, err)
 		ctx.HTML(http.StatusBadRequest, "400.html", gin.H{})
 		return
 	}
@@ -28,6 +36,13 @@ func (server *Server) listUpTodo(ctx *gin.Context) {
 
 	total, dbErr := server.repo.CountTodo(ctx)
 	if dbErr != nil {
+		errDetails := util.SetErrorDetails(
+			"Error occurred when fetching the data from DB",
+			"User can see 500 Internal Server Error page",
+			"This might be the database connection issue, please check the database status",
+			"todo.go file, listupTodo method on CountTodo query",
+		)
+		log.Println(errDetails, dbErr)
 		ctx.HTML(http.StatusInternalServerError, "500.html", gin.H{})
 		return
 	}
@@ -40,6 +55,13 @@ func (server *Server) listUpTodo(ctx *gin.Context) {
 	}
 	todoList, dbErr := server.repo.ListTodo(ctx, arg)
 	if dbErr != nil {
+		errDetails := util.SetErrorDetails(
+			"Error occurred when fetching the data from DB",
+			"User can see 500 Internal Server Error page",
+			"This might be the database connection issue, please check the database status",
+			"todo.go file, listupTodo method on ListTodo query",
+		)
+		log.Println(errDetails, dbErr)
 		ctx.HTML(http.StatusInternalServerError, "500.html", gin.H{})
 		return
 	}
@@ -66,6 +88,13 @@ type createTodoRequest struct {
 func (server *Server) createTodo(ctx *gin.Context) {
 	var req createTodoRequest
 	if err := ctx.ShouldBind(&req); err != nil {
+		errDetails := util.SetErrorDetails(
+			"User manipulated invalid request data",
+			"User can see 400 Bad Request page",
+			"Request param tempered by client, no need to special issue handling",
+			"todo.go file, createTodo method",
+		)
+		log.Println(errDetails, err)
 		ctx.HTML(http.StatusBadRequest, "400.html", gin.H{})
 		return
 	}
@@ -76,6 +105,13 @@ func (server *Server) createTodo(ctx *gin.Context) {
 	}
 	result, dbErr := server.repo.CreateTodo(ctx, arg)
 	if dbErr != nil {
+		errDetails := util.SetErrorDetails(
+			"Error occurred when inserting the data to DB",
+			"User can see 500 Internal Server Error page",
+			"This might be the database connection issue, please check the database status",
+			"todo.go file, createTodo method on CreateTodo query",
+		)
+		log.Println(errDetails, dbErr)
 		ctx.HTML(http.StatusInternalServerError, "500.html", gin.H{})
 		return
 	}
@@ -91,6 +127,13 @@ type getTodoRequest struct {
 func (server *Server) showTodo(ctx *gin.Context) {
 	var req getTodoRequest
 	if err := ctx.ShouldBind(&req); err != nil {
+		errDetails := util.SetErrorDetails(
+			"User manipulated invalid ID param",
+			"User can see 400 Bad Request page",
+			"Request param tempered by client, no need to special issue handling",
+			"todo.go file, showTodo method",
+		)
+		log.Println(errDetails, err)
 		ctx.HTML(http.StatusBadRequest, "400.html", gin.H{})
 		return
 	}
@@ -98,6 +141,13 @@ func (server *Server) showTodo(ctx *gin.Context) {
 	todo, dbErr := server.repo.GetTodo(ctx, req.ID)
 	if dbErr != nil {
 		if dbErr == sql.ErrNoRows {
+			errDetails := util.SetErrorDetails(
+				"The selected data does not exist",
+				"User can see 500 Internal Server Error page",
+				"The data related request ID does not exist or this could be data inconsistency issue",
+				"todo.go file, showTodo method on GetDodo query",
+			)
+			log.Println(errDetails, dbErr)
 			ctx.HTML(http.StatusNotFound, "500.html", gin.H{})
 			return
 		}
@@ -114,12 +164,26 @@ func (server *Server) showTodo(ctx *gin.Context) {
 func (server *Server) editTodo(ctx *gin.Context) {
 	var req getTodoRequest
 	if err := ctx.ShouldBind(&req); err != nil {
+		errDetails := util.SetErrorDetails(
+			"User manipulated invalid ID param",
+			"User can see 400 Bad Request page",
+			"Request param tempered by client, no need to special issue handling",
+			"todo.go file, showTodo method",
+		)
+		log.Println(errDetails, err)
 		ctx.HTML(http.StatusBadRequest, "400.html", gin.H{})
 		return
 	}
 
 	todo, dbErr := server.repo.GetTodo(ctx, req.ID)
 	if dbErr != nil {
+		errDetails := util.SetErrorDetails(
+			"Error occurred when fetching the data from DB",
+			"User can see 500 Internal Server Error page",
+			"This might be the database connection issue, please check the database status",
+			"todo.go file, listupTodo method on ListTodo query",
+		)
+		log.Println(errDetails, dbErr)
 		ctx.HTML(http.StatusInternalServerError, "500.html", gin.H{})
 		return
 	}
@@ -138,6 +202,13 @@ type updateTodoRequest struct {
 func (server *Server) updateTodo(ctx *gin.Context) {
 	var req updateTodoRequest
 	if err := ctx.ShouldBind(&req); err != nil {
+		errDetails := util.SetErrorDetails(
+			"User manipulated invalid request data",
+			"User can see 400 Bad Request page",
+			"Request param tempered by client, no need to special issue handling",
+			"todo.go file, updateTodo method",
+		)
+		log.Println(errDetails, err)
 		ctx.HTML(http.StatusBadRequest, "400.html", gin.H{})
 		return
 	}
@@ -147,6 +218,13 @@ func (server *Server) updateTodo(ctx *gin.Context) {
 		ID:          req.ID,
 	}
 	if dbErr := server.repo.UpdateTodo(ctx, arg); dbErr != nil {
+		errDetails := util.SetErrorDetails(
+			"Error occurred when updating the data on DB",
+			"User can see 500 Internal Server Error page",
+			"This might be the database connection issue, please check the database status",
+			"todo.go file, updateTodo method on UpdateTodo query",
+		)
+		log.Println(errDetails, dbErr)
 		ctx.HTML(http.StatusInternalServerError, "500.html", gin.H{})
 		return
 	}
@@ -162,6 +240,13 @@ type deleteTodoRequest struct {
 func (server *Server) deleteTodo(ctx *gin.Context) {
 	var req deleteTodoRequest
 	if err := ctx.ShouldBind(&req); err != nil {
+		errDetails := util.SetErrorDetails(
+			"User manipulated invalid request data",
+			"User can see 400 Bad Request page",
+			"Request param tempered by client, no need to special issue handling",
+			"todo.go file, deleteTodo method",
+		)
+		log.Println(errDetails, err)
 		ctx.HTML(http.StatusBadRequest, "400.html", gin.H{})
 		return
 	}
@@ -169,12 +254,26 @@ func (server *Server) deleteTodo(ctx *gin.Context) {
 	if len(req.IDList) == 0 {
 		deleteId := req.ID
 		if dbErr := server.repo.DeleteTodo(ctx, deleteId); dbErr != nil {
+			errDetails := util.SetErrorDetails(
+				"Error occurred when deleting the data on DB",
+				"User can see 500 Internal Server Error page",
+				"This might be the database connection issue, please check the database status",
+				"todo.go file, deleteTodo method on DeleteTodo query",
+			)
+			log.Println(errDetails, dbErr)
 			ctx.HTML(http.StatusInternalServerError, "500.html", gin.H{})
 			return
 		}
 	} else {
 		deleteIds := req.IDList
 		if dbErr := server.repo.DeleteTodoList(ctx, deleteIds); dbErr != nil {
+			errDetails := util.SetErrorDetails(
+				"Error occurred when deleting the data on DB",
+				"User can see 500 Internal Server Error page",
+				"This might be the database connection issue, please check the database status",
+				"todo.go file, deleteTodo method on DeleteTodoList query",
+			)
+			log.Println(errDetails, dbErr)
 			ctx.HTML(http.StatusInternalServerError, "500.html", gin.H{})
 			return
 		}
