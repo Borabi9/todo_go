@@ -32,7 +32,7 @@ func main() {
 	repo := db.NewRepo(conn)
 	server := api.NewServer(repo, false)
 
-	err = server.Start(fmt.Sprintf("%s:%s", config.ServerAddress, config.ServerPort))
+	err = server.Start()
 	if err != nil {
 		log.Fatal("Cannot start server: ", err)
 	}
