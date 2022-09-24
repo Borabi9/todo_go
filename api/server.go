@@ -61,6 +61,6 @@ func (server *Server) setupRouter(isTest bool) {
 	server.router = router
 }
 
-func (server *Server) Start() error {
-	return server.router.Run()
+func (server *Server) Start(address string) error {
+	return server.router.Run(address)
 }
