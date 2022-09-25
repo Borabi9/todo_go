@@ -67,7 +67,7 @@ func (server *Server) listUpTodo(ctx *gin.Context) {
 	}
 
 	ctx.HTML(http.StatusOK, "index.html", gin.H{
-		"title":    "Hello World!",
+		"title":    "Todo List",
 		"todoList": todoList,
 		"token":    csrf.GetToken(ctx),
 		"pageInfo": pageInfo,
