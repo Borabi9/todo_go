@@ -273,7 +273,6 @@ func TestCreateTodoAPI(t *testing.T) {
 				require.Equal(t, http.StatusFound, recorder.Code)
 			},
 		},
-		// TODO: add Bad Request case related with validation
 		{
 			name: "Internal Error",
 			body: createTodoRequest{
@@ -342,7 +341,6 @@ func TestEditTodoAPI(t *testing.T) {
 				require.Equal(t, http.StatusOK, recorder.Code)
 			},
 		},
-		// TODO: add case for not found
 		{
 			name:   "Internal Error",
 			todoID: todo.ID,
@@ -543,7 +541,6 @@ func TestDeleteTodoAPI(t *testing.T) {
 				require.Equal(t, http.StatusFound, recorder.Code)
 			},
 		},
-		// TODO: Add Bad Request Case
 		{
 			name: "Internal Error 1",
 			body: deleteTodoRequest{
