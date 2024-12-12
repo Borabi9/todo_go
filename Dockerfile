@@ -1,9 +1,9 @@
-FROM golang:1.19-alpine3.16 AS builder
+FROM golang:1.23.4-alpine3.21 AS builder
 WORKDIR /app
 COPY . .
 RUN go build -o todo src/main.go
 
-FROM alpine:3.16
+FROM alpine:3.21
 RUN apk add --no-cache tzdata
 WORKDIR /todo/app
 COPY --from=builder /app/todo .
